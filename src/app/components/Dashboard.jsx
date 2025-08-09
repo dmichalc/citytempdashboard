@@ -1,5 +1,5 @@
 //'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import axios from 'axios';
 import { Box, Button, Typography, TextField, List, ListItem } from '@mui/material';
@@ -12,6 +12,31 @@ export default function WeatherComponent() {
     const [prevData, setPrevData] = useState(null);
     const [url, setUrl] = useState(`https://api.openweathermap.org/data/2.5/weather?q=Edmonton&appid=${process.env.NEXT_PUBLIC_API_KEY} `);
     const { data, error } = useSWR(url, fetcher);
+    const [population, setPopulation] = useState(null);
+    const [popLoading, setPopLoading] = useState(false);
+    const [popError, setPopError] = useState(null);
+
+    useEffect(() => {
+        if (!data || !data.name) return;
+        setPopLoading(true);
+        setPopError(null);
+        axios.get(`https://api.api-ninjas.com/v1/city?name=${data.name}`, {
+            headers: { 'X-Api-Key': '+jgxYx6QCzXr6K9jANOZgA==t8Lx9MLLRdZj5HiM' }
+        })
+        .then((res) => {
+            if (res.data && res.data.length > 0) {
+                setPopulation(res.data[0].population);
+            } else {
+                setPopulation('N/A');
+            }
+            setPopLoading(false);
+        })
+        .catch((err) => {
+            setPopError('Error fetching population');
+            setPopulation(null);
+            setPopLoading(false);
+        });
+    }, [data]);
 
     const handleInputChange = (event) => {
         setPrevData(data);
@@ -39,11 +64,22 @@ export default function WeatherComponent() {
                     gap: '70px',
                 }}
             >
-                <Typography variant='h1' width='30%'>
-                    {data.name}{' '}
-                </Typography>
+                <Box width='30%' textAlign='center'>
+                    <Typography variant='h1'>
+                        {data.name}{' '}
+                    </Typography>
+                    {/* Population Data Section under city name */}
+                    <Typography variant='h6' sx={{ mt: 1 }}>Population:</Typography>
+                    {popLoading ? (
+                        <Typography variant='body1'>Loading population...</Typography>
+                    ) : popError ? (
+                        <Typography variant='body1' color='error'>{popError}</Typography>
+                    ) : (
+                        <Typography variant='h5'>{population ? population.toLocaleString() : 'N/A'}</Typography>
+                    )}
+                </Box>
                 <Typography variant='h1'> {Math.round(data.main.temp - 273.15)}°C </Typography>
-                <TextField label='Enter City Name' variant='outlined' value={city} onChange={handleInputChange} />
+                <TextField label='Enter City Name' variant='outlined' onClick={() => setCity('')} value={city} onChange={handleInputChange} />
                 <Button variant='contained' sx={{ height: '20%', size: 'large' }} onClick={handleSubmit}>
                     Submit
                 </Button>
@@ -59,7 +95,7 @@ export default function WeatherComponent() {
                 )}
             </Box>
 
-            <List
+           <List
                 sx={{
                     display: 'flex',
                     Align: 'center',
